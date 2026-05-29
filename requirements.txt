@@ -1,0 +1,43 @@
+Django==4.2.16
+djangorestframework>=3.15.2
+
+# JWT auth
+djangorestframework-simplejwt>=5.5.1
+
+# Base de datos PostgreSQL
+psycopg2-binary>=2.9
+
+# Swagger / OpenAPI
+drf-spectacular>=0.27
+
+# Manejo de variables de entorno
+python-dotenv>=1.0
+
+# CORS (para frontend luego)
+django-cors-headers>=4.3
+
+# Filtros y búsquedas
+django-filter>=23.5
+
+# Utilidades HTTP
+requests>=2.31
+
+# Autenticación y gestión de usuarios
+djoser>=2.2
+
+djangorestframework_simplejwt==5.5.1
+social-auth-app-django==5.4.1
+
+django-extensions==4.1
+
+# Servidor producción
+gunicorn>=22.0
+
+# Static files en producción
+whitenoise==6.9.0
+
+# Para manejo de archivos Excel
+openpyxl>=3.1
+
+# Para generación de PDFs
+reportlab>=4.0
