@@ -1,4 +1,6 @@
 # users/views.py
+import sys
+
 from .serializers import (
     LoginSerializer,
     CambiarPasswordSerializer,
@@ -133,6 +135,9 @@ class RegisterView(APIView):
                 fail_silently  = False,
             )
         except Exception as e:
+            import sys
+
+            print(f">>> ERROR EMAIL: {e}", file=sys.stderr)
             user.delete()
             return Response(
                 {'error': f'No se pudo enviar el email: {str(e)}'},

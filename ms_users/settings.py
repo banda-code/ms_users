@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'corsheaders',  # ✅ agrega esto
 
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',  # ✅ agrega esto
     'drf_spectacular',
     'users',
 ]
@@ -187,3 +188,5 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:5173'
 ).split(',')
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')  # ✅ agrega
