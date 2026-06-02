@@ -120,6 +120,10 @@ class RegisterView(APIView):
             is_active   = False,
             is_verified = False,
         )
+        # ✅ Marca profile_completed si tiene los datos necesarios
+        if user.first_name and user.last_name and user.ci:
+            user.profile_completed = True
+            user.save()
 
         token = secrets.token_urlsafe(32)
         user.activation_token = token
