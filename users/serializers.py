@@ -35,6 +35,7 @@ class UserSerializer(BaseUserSerializer):
             'last_name',
             'ci',
             'phone',
+            'fecha_nacimiento',
             'role',
             'is_verified',
             'profile_completed',
@@ -65,6 +66,7 @@ class PerfilSerializer(serializers.ModelSerializer):
             'last_name',
             'ci',
             'phone',
+            'fecha_nacimiento',
             'role',
             'is_verified',
             'profile_completed',
@@ -92,5 +94,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['first_name']  = user.first_name or ''  # ✅
         token['last_name']   = user.last_name or ''   # ✅
         token['ci']          = user.ci or ''           # ✅
+        token['fecha_nacimiento'] = user.fecha_nacimiento.isoformat() if user.fecha_nacimiento else None   # ✅
+        token['department_id'] = str(user.department_id) if user.department_id else None
 
         return token

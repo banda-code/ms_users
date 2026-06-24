@@ -16,6 +16,7 @@ from .views import (
     ActivarCuentaView,          # ← nuevo
     SolicitarResetPasswordView, # ← nuevo
     ResetPasswordView,          # ← nuevo
+    PagosPorDepartamentoIdView,
 )
 
 urlpatterns = [
@@ -39,4 +40,5 @@ urlpatterns = [
     path('admin/departamentos/', ResumenDepartamentosView.as_view(), name='resumen-departamentos'),
     path('admin/asignar-admin/', AsignarAdminDepartamentoView.as_view(), name='asignar-admin'),
     path('admin/quitar-admin/', QuitarAdminDepartamentoView.as_view(), name='quitar-admin'),
+    path('departamento-id/', PagosPorDepartamentoIdView.as_view(), name='pagos-por-departamento-id'),
 ]

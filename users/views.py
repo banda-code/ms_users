@@ -34,25 +34,30 @@ PAYMENTS_SERVICE_URL     = os.environ.get('PAYMENTS_SERVICE_URL',     'http://lo
 def get_department(dept_id, token=None):
     """Consulta ms_certificates para obtener un departamento por id"""
     try:
-        headers  = {"Authorization": f"Bearer {token}"} if token else {}
-        response = http_requests.get(
-            f"{CERTIFICATES_SERVICE_URL}/api/departments/{dept_id}/",
-            headers=headers,
-            timeout=5
-        )
-        if response.status_code == 200:
-            return response.json()
+        internal_token = os.environ.get('INTERNAL_SERVICE_TOKEN', '')
+        headers = {
+            "Authorization": f"Internal {internal_token}",
+            "Host": "test.armada.mil.bo"
+        }
+        all_depts = get_all_departments(token)
+        for d in all_depts:
+            if str(d.get('id')) == str(dept_id):
+                return d
         return None
-    except http_requests.exceptions.RequestException:
+    except Exception:
         return None
 
 
 def get_all_departments(token=None):
     """Consulta ms_certificates para obtener todos los departamentos"""
     try:
-        headers  = {"Authorization": f"Bearer {token}"} if token else {}
+        internal_token = os.environ.get('INTERNAL_SERVICE_TOKEN', '')
+        headers = {
+            "Authorization": f"Internal {internal_token}",
+            "Host": "test.armada.mil.bo"
+        }
         response = http_requests.get(
-            f"{CERTIFICATES_SERVICE_URL}/api/departments/",
+            f"{CERTIFICATES_SERVICE_URL}/api/certificates/departments/",
             headers=headers,
             timeout=5
         )
@@ -66,9 +71,13 @@ def get_all_departments(token=None):
 def get_pagos_departamento(dept_id, token=None):
     """Consulta ms_payments para obtener pagos de un departamento"""
     try:
-        headers  = {"Authorization": f"Bearer {token}"} if token else {}
+        internal_token = os.environ.get('INTERNAL_SERVICE_TOKEN', '')
+        headers = {
+            "Authorization": f"Internal {internal_token}",
+            "Host": "test.armada.mil.bo"
+        }
         response = http_requests.get(
-            f"{PAYMENTS_SERVICE_URL}/api/payments/?department_id={dept_id}",
+            f"{PAYMENTS_SERVICE_URL}/api/payments/departamento-id/?department_id={dept_id}",
             headers=headers,
             timeout=5
         )
@@ -192,7 +201,11 @@ class LoginView(APIView):
                 'username':          user.username,
                 'first_name':        user.first_name,
                 'last_name':         user.last_name,
+                'ci':                user.ci,
+                'phone':             user.phone,
+                'fecha_nacimiento':  user.fecha_nacimiento.isoformat() if hasattr(user.fecha_nacimiento, 'isoformat') else user.fecha_nacimiento,
                 'role':              user.role,
+                'is_verified':       user.is_verified,
                 'profile_completed': user.profile_completed,
             },
             'tokens': {
@@ -233,6 +246,7 @@ class PerfilView(APIView):
             'last_name':         user.last_name,
             'ci':                user.ci,
             'phone':             user.phone,
+            'fecha_nacimiento':  user.fecha_nacimiento.isoformat() if hasattr(user.fecha_nacimiento, 'isoformat') else user.fecha_nacimiento,
             'role':              user.role,
             'is_verified':       user.is_verified,
             'profile_completed': user.profile_completed,
@@ -242,6 +256,9 @@ class PerfilView(APIView):
         })
 
     def put(self, request):
+        print(">>> ENTRÓ AL PUT PERFIL")
+        print(">>> USUARIO:", request.user.id, request.user.email)
+        print(">>> DATA:", request.data)
         user = request.user
         data = request.data
 
@@ -249,11 +266,13 @@ class PerfilView(APIView):
         user.last_name  = data.get('last_name',  user.last_name)
         user.ci         = data.get('ci',         user.ci)
         user.phone      = data.get('phone',      user.phone)
+        user.fecha_nacimiento = data.get('fecha_nacimiento', user.fecha_nacimiento)
 
         if user.first_name and user.last_name and user.ci:
             user.profile_completed = True
 
         user.save()
+        print(">>> DESPUÉS DE SAVE:", user.first_name, user.last_name, user.ci, user.phone)
 
         return Response({
             'id':                user.id,
@@ -263,6 +282,7 @@ class PerfilView(APIView):
             'last_name':         user.last_name,
             'ci':                user.ci,
             'phone':             user.phone,
+            'fecha_nacimiento':  user.fecha_nacimiento.isoformat() if hasattr(user.fecha_nacimiento, 'isoformat') else user.fecha_nacimiento,
             'role':              user.role,
             'is_verified':       user.is_verified,
             'profile_completed': user.profile_completed,
@@ -671,3 +691,50 @@ class QuitarAdminDepartamentoView(APIView):
             'email':   user.email,
             'role':    user.role,
         })
+
+class PagosPorDepartamentoIdView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        auth_header    = request.META.get('HTTP_AUTHORIZATION', '')
+        internal_token = os.environ.get('INTERNAL_SERVICE_TOKEN', '')
+        if auth_header != f"Internal {internal_token}":
+            return Response({'error': 'No autorizado'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        dept_id = request.query_params.get('department_id')
+        if not dept_id:
+            return Response([])
+
+        try:
+            resp_c = http_requests.get(
+                f"{settings.CERTIFICATES_SERVICE_URL}/api/certificates/tipos/",
+                headers={"Authorization": f"Internal {internal_token}", "Host": "test.armada.mil.bo"},
+                timeout=5
+            )
+            cert_ids_dept = []
+            if resp_c.status_code == 200:
+                cert_ids_dept = [
+                    c['id'] for c in resp_c.json()
+                    if c.get('department', {}).get('id') == str(dept_id)
+                ]
+
+            resp_s = http_requests.get(
+                f"{settings.SOLICITUDES_SERVICE_URL}/api/solicitudes/admin/todas/",
+                headers={"Authorization": f"Internal {internal_token}", "Host": "test.armada.mil.bo"},
+                timeout=5
+            )
+            solic_ids_dept = []
+            if resp_s.status_code == 200:
+                solic_ids_dept = [
+                    s['id'] for s in resp_s.json()
+                    if s.get('certificate_type_id') in cert_ids_dept
+                ]
+
+            pagos = Payment.objects.filter(estado__in=['en_proceso', 'pagado'])
+            data = []
+            for p in pagos:
+                if any(sid in solic_ids_dept for sid in (p.solicitud_ids or [])):
+                    data.append({'id': p.id, 'estado': p.estado, 'monto': float(p.monto)})
+            return Response(data)
+        except Exception:
+            return Response([])
