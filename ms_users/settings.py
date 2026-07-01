@@ -119,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # ── Idioma y zona horaria ────────────────────────────────────────────
 LANGUAGE_CODE = 'es-bo'
-TIME_ZONE = 'America/La_Paz'
+TIME_ZONE = "America/La_Paz"
 USE_I18N = True
 USE_TZ = True
 
