@@ -36,7 +36,7 @@ urlpatterns = [
     # Solo admin
     path('admin/todos/', ListarUsuariosView.as_view(), name='listar-usuarios'),
     path('admin/crear-usuario/', CrearUsuarioStaffAdminView.as_view(), name='crear-usuario'),
-    path('admin/<int:pk>/activar/', ToggleActivarUsuarioView.as_view(), name='toggle-activar'),
+    path('admin/<uuid:pk>/activar/', ToggleActivarUsuarioView.as_view(), name='toggle-activar'),
     path('admin/departamentos/', ResumenDepartamentosView.as_view(), name='resumen-departamentos'),
     path('admin/asignar-admin/', AsignarAdminDepartamentoView.as_view(), name='asignar-admin'),
     path('admin/quitar-admin/', QuitarAdminDepartamentoView.as_view(), name='quitar-admin'),

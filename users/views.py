@@ -446,7 +446,7 @@ class ToggleActivarUsuarioView(APIView):
     serializer_class   = UserSerializer
 
     def put(self, request, pk):
-        if request.user.role != 'admin':
+        if request.user.role not in ['admin', 'superadmin']:
             return Response(
                 {'error': 'No tienes permiso'},
                 status=status.HTTP_403_FORBIDDEN
