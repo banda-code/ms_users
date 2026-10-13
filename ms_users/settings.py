@@ -14,10 +14,26 @@ load_dotenv(BASE_DIR / '.env')  # ✅ carga el .env
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')
+    if host.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+
+# ── URLs públicas del sistema ─────────────────────────────────────────
+PUBLIC_HOST = os.environ.get('PUBLIC_HOST', 'localhost')
+PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', 'http://localhost:5173')
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', PUBLIC_BASE_URL)
+BACKEND_PUBLIC_URL = os.environ.get('BACKEND_PUBLIC_URL', PUBLIC_BASE_URL)
 
 # Application definition
 
@@ -167,7 +183,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ── PPE ──────────────────────────────────────────────────────────────
-PPE_TEST_MODE = os.environ.get('PPE_TEST_MODE', 'True') == 'True'
+PPE_TEST_MODE = os.environ.get('PPE_TEST_MODE', 'False').lower() == 'true'
 PPE_BASE_URL = os.environ.get('PPE_BASE_URL')
 PPE_TOKEN = os.environ.get('PPE_TOKEN')
 
@@ -213,10 +229,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ── Frontend URL ────────────────────────────────────────────────────
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173'
-).split(',')
-
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')  # ✅ agrega
-ALLOWED_HOSTS = ['*']
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', FRONTEND_URL).split(',')
+    if origin.strip()
+]

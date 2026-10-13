@@ -37,7 +37,7 @@ def get_department(dept_id, token=None):
         internal_token = os.environ.get('INTERNAL_SERVICE_TOKEN', '')
         headers = {
             "Authorization": f"Internal {internal_token}",
-            "Host": "test.armada.mil.bo"
+            "Host": settings.PUBLIC_HOST
         }
         all_depts = get_all_departments(token)
         for d in all_depts:
@@ -54,7 +54,7 @@ def get_all_departments(token=None):
         internal_token = os.environ.get('INTERNAL_SERVICE_TOKEN', '')
         headers = {
             "Authorization": f"Internal {internal_token}",
-            "Host": "test.armada.mil.bo"
+            "Host": settings.PUBLIC_HOST
         }
         response = http_requests.get(
             f"{CERTIFICATES_SERVICE_URL}/api/certificates/departments/",
@@ -74,7 +74,7 @@ def get_pagos_departamento(dept_id, token=None):
         internal_token = os.environ.get('INTERNAL_SERVICE_TOKEN', '')
         headers = {
             "Authorization": f"Internal {internal_token}",
-            "Host": "test.armada.mil.bo"
+            "Host": settings.PUBLIC_HOST
         }
         response = http_requests.get(
             f"{PAYMENTS_SERVICE_URL}/api/payments/departamento-id/?department_id={dept_id}",
@@ -149,8 +149,6 @@ class RegisterView(APIView):
             )
         except Exception as e:
             import sys
-
-            print(f">>> ERROR EMAIL: {e}", file=sys.stderr)
             user.delete()
             return Response(
                 {'error': f'No se pudo enviar el email: {str(e)}'},
@@ -256,9 +254,6 @@ class PerfilView(APIView):
         })
 
     def put(self, request):
-        print(">>> ENTRÓ AL PUT PERFIL")
-        print(">>> USUARIO:", request.user.id, request.user.email)
-        print(">>> DATA:", request.data)
         user = request.user
         data = request.data
 
@@ -272,7 +267,6 @@ class PerfilView(APIView):
             user.profile_completed = True
 
         user.save()
-        print(">>> DESPUÉS DE SAVE:", user.first_name, user.last_name, user.ci, user.phone)
 
         return Response({
             'id':                user.id,
@@ -708,7 +702,7 @@ class PagosPorDepartamentoIdView(APIView):
         try:
             resp_c = http_requests.get(
                 f"{settings.CERTIFICATES_SERVICE_URL}/api/certificates/tipos/",
-                headers={"Authorization": f"Internal {internal_token}", "Host": "test.armada.mil.bo"},
+                headers={"Authorization": f"Internal {internal_token}", "Host": settings.PUBLIC_HOST},
                 timeout=5
             )
             cert_ids_dept = []
@@ -720,7 +714,7 @@ class PagosPorDepartamentoIdView(APIView):
 
             resp_s = http_requests.get(
                 f"{settings.SOLICITUDES_SERVICE_URL}/api/solicitudes/admin/todas/",
-                headers={"Authorization": f"Internal {internal_token}", "Host": "test.armada.mil.bo"},
+                headers={"Authorization": f"Internal {internal_token}", "Host": settings.PUBLIC_HOST},
                 timeout=5
             )
             solic_ids_dept = []

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django import forms
 from .models import User
+from django.conf import settings
 import requests
 import os
 
@@ -10,7 +11,7 @@ def get_departamentos():
         url = os.environ.get('CERTIFICATES_SERVICE_URL', 'http://ms_certificates:8000')
         resp = requests.get(
             f"{url}/api/certificates/departments/publico/",
-            headers={"Host": "test.armada.mil.bo"},
+            headers={"Host": settings.PUBLIC_HOST},
             timeout=3
         )
         if resp.status_code == 200:
