@@ -1,6 +1,6 @@
 # users/views.py
 import sys
-
+from datetime import date
 from .serializers import (
     LoginSerializer,
     CambiarPasswordSerializer,
@@ -257,29 +257,96 @@ class PerfilView(APIView):
         user = request.user
         data = request.data
 
-        user.first_name = data.get('first_name', user.first_name)
-        user.last_name  = data.get('last_name',  user.last_name)
-        user.ci         = data.get('ci',         user.ci)
-        user.phone      = data.get('phone',      user.phone)
-        user.fecha_nacimiento = data.get('fecha_nacimiento', user.fecha_nacimiento)
+        # Campos protegidos: no se pueden modificar desde el perfil.
+        campos_protegidos = {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "ci": user.ci,
+            "email": user.email,
+            "username": user.username,
+            "role": user.role,
+        }
 
-        if user.first_name and user.last_name and user.ci:
-            user.profile_completed = True
+        # Rechazar intentos de cambiar la identidad.
+        # Se aceptan valores idénticos por compatibilidad
+        # con el frontend actual.
+        for campo, actual in campos_protegidos.items():
+            if campo in data:
+                recibido = data[campo]
 
-        user.save()
+                if str(recibido or "") != str(actual or ""):
+                    return Response(
+                        {
+                            "error": (
+                                f"No está permitido modificar "
+                                f"el campo '{campo}'. "
+                                "Solo puedes actualizar tu teléfono."
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+        # Solo se permite modificar teléfono y fecha de nacimiento.
+        campos_actualizados = []
+
+        if "phone" in data:
+            telefono = data["phone"]
+
+            if not isinstance(telefono, str):
+                return Response(
+                    {"error": "El teléfono debe ser texto."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            telefono = telefono.strip()
+
+            if len(telefono) > 20:
+                return Response(
+                    {"error": "El teléfono supera los 20 caracteres."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user.phone = telefono
+            campos_actualizados.append("phone")
+
+        if "fecha_nacimiento" in data:
+            fecha = data["fecha_nacimiento"]
+
+            try:
+                fecha = date.fromisoformat(fecha) if fecha else None
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "Fecha de nacimiento inválida. Usa AAAA-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if fecha and fecha > date.today():
+                return Response(
+                    {"error": "La fecha de nacimiento no puede ser futura."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user.fecha_nacimiento = fecha
+            campos_actualizados.append("fecha_nacimiento")
+
+        if campos_actualizados:
+            user.save(update_fields=campos_actualizados)
 
         return Response({
-            'id':                user.id,
-            'email':             user.email,
-            'username':          user.username,
-            'first_name':        user.first_name,
-            'last_name':         user.last_name,
-            'ci':                user.ci,
-            'phone':             user.phone,
-            'fecha_nacimiento':  user.fecha_nacimiento.isoformat() if hasattr(user.fecha_nacimiento, 'isoformat') else user.fecha_nacimiento,
-            'role':              user.role,
-            'is_verified':       user.is_verified,
-            'profile_completed': user.profile_completed,
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "ci": user.ci,
+            "phone": user.phone,
+            "fecha_nacimiento": (
+                user.fecha_nacimiento.isoformat()
+                if user.fecha_nacimiento else None
+            ),
+            "role": user.role,
+            "is_verified": user.is_verified,
+            "profile_completed": user.profile_completed,
         })
 
 

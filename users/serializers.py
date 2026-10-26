@@ -73,7 +73,18 @@ class PerfilSerializer(serializers.ModelSerializer):
             'department',
             'created_at',
         )
-        read_only_fields = ('email', 'role', 'is_verified', 'created_at')
+        read_only_fields = (
+            'id',
+            'email',
+            'username',
+            'first_name',
+            'last_name',
+            'ci',
+            'role',
+            'is_verified',
+            'profile_completed',
+            'created_at',
+        )
 
     @extend_schema_field(DepartmentResumenSerializer)
     def get_department(self, obj):
