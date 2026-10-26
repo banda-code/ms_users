@@ -79,7 +79,7 @@ def get_pagos_departamento(dept_id, token=None):
         response = http_requests.get(
             f"{PAYMENTS_SERVICE_URL}/api/payments/departamento-id/?department_id={dept_id}",
             headers=headers,
-            timeout=5
+            timeout=75
         )
         if response.status_code == 200:
             return response.json()
@@ -715,7 +715,7 @@ class PagosPorDepartamentoIdView(APIView):
             resp_s = http_requests.get(
                 f"{settings.SOLICITUDES_SERVICE_URL}/api/solicitudes/admin/todas/",
                 headers={"Authorization": f"Internal {internal_token}", "Host": settings.PUBLIC_HOST},
-                timeout=5
+                timeout=30
             )
             solic_ids_dept = []
             if resp_s.status_code == 200:
