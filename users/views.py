@@ -628,44 +628,119 @@ class ResetPasswordView(APIView):
 
         return Response({'message': 'Contraseña actualizada correctamente.'})
 
+def get_resumen_daf_interno():
+    """
+    Obtiene estadísticas de todos los departamentos
+    mediante una sola petición a ms_payments.
+    """
+    import hmac
+
+    token = os.environ.get("INTERNAL_SERVICE_TOKEN", "")
+    if not token:
+        raise RuntimeError("Token interno no configurado")
+
+    respuesta = http_requests.get(
+        f"{PAYMENTS_SERVICE_URL}/api/payments/internal/resumen-daf/",
+        headers={
+            "Authorization": f"Internal {token}",
+            "Host": settings.PUBLIC_HOST,
+        },
+        timeout=20,
+    )
+
+    respuesta.raise_for_status()
+    datos = respuesta.json()
+
+    if not isinstance(datos, dict):
+        raise ValueError("Formato incorrecto del resumen DAF")
+
+    return datos
 
 class ResumenDepartamentosView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if request.user.role != 'superadmin':
+        if request.user.role != "superadmin":
             return Response(
-                {'error': 'No tienes permiso'},
-                status=status.HTTP_403_FORBIDDEN
+                {"error": "No tienes permiso"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-        token       = request.auth
-        # ✅ Una sola llamada HTTP para todos los departamentos
-        departamentos = get_all_departments(token)
+        try:
+            departamentos = get_all_departments(request.auth)
 
-        data = []
-        for dept in departamentos:
-            # ✅ Admins del departamento — esto sí lo tenemos en nuestra BD
+            # Una sola petición para obtener todas las estadísticas.
+            resumen_pagos = get_resumen_daf_interno()
+
+            ids_departamentos = [
+                str(d["id"]) for d in departamentos
+            ]
+
+            # Una consulta a PostgreSQL para los administradores.
             admins = User.objects.filter(
-                department_id = dept['id'],
-                role          = 'admin'
-            ).values('id', 'email', 'first_name', 'last_name', 'is_active')
+                department_id__in=ids_departamentos,
+                role="admin",
+            ).values(
+                "id",
+                "department_id",
+                "email",
+                "first_name",
+                "last_name",
+                "is_active",
+            )
 
-            # ✅ Pagos — consultamos ms_payments
-            pagos = get_pagos_departamento(dept['id'], token)
-            pagos_completados = [p for p in pagos if p.get('estado') == 'pagado']
-            monto_total       = sum(float(p.get('monto', 0)) for p in pagos_completados)
+            admins_por_depto = {
+                dept_id: [] for dept_id in ids_departamentos
+            }
 
-            data.append({
-                'id':                dept['id'],
-                'nombre':            dept['name'],
-                'admins':            list(admins),
-                'total_pagos':       len(pagos),
-                'pagos_completados': len(pagos_completados),
-                'monto_total':       monto_total,
-            })
+            for admin in admins:
+                dept_id = str(admin["department_id"])
 
-        return Response(data)
+                if dept_id in admins_por_depto:
+                    admins_por_depto[dept_id].append({
+                        "id": admin["id"],
+                        "email": admin["email"],
+                        "first_name": admin["first_name"],
+                        "last_name": admin["last_name"],
+                        "is_active": admin["is_active"],
+                    })
+
+            data = []
+
+            for dept in departamentos:
+                dept_id = str(dept["id"])
+
+                estadisticas = resumen_pagos.get(dept_id, {})
+
+                data.append({
+                    "id": dept_id,
+                    "nombre": dept["name"],
+                    "admins": admins_por_depto.get(dept_id, []),
+                    "total_pagos": estadisticas.get("total_pagos", 0),
+                    "pagos_completados": estadisticas.get(
+                        "pagos_completados", 0
+                    ),
+                    "monto_total": estadisticas.get("monto_total", 0),
+                })
+
+            return Response(data)
+
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Error cargando resumen del Panel DAF"
+            )
+
+            return Response(
+                {
+                    "error": (
+                        "No se pudieron consultar las estadísticas. "
+                        "Intente nuevamente."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
 
 class AsignarAdminDepartamentoView(APIView):
